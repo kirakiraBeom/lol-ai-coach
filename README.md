@@ -26,7 +26,7 @@ Riot API와 MCP를 활용한 개인 맞춤형
 - [v] 프로젝트 설계
 - [v] Python 가상 환경 기초 학습
 - [v] GitHub 연동
-- [ ] Riot API 연동
+- [v] Riot API 연동
 - [ ] 전적 조회 기능
 - [ ] 듀오 분석 기능
 - [ ] MCP 서버 구현
