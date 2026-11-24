@@ -1,0 +1,12 @@
+{
+    "support": {
+        "game_name": "YOUR_GAME_NAME",
+        "tag_line": "YOUR_TAG",
+        "preferred_position": "UTILITY"
+    },
+    "adc": {
+        "game_name": "DUO_GAME_NAME",
+        "tag_line": "DUO_TAG",
+        "preferred_position": "BOTTOM"
+    }
+}
