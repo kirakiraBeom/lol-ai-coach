@@ -1,0 +1,38 @@
+# Python 가상 환경
+.venv/ 
+venv/
+# .venv/ : 용량이 크고 다른 PC에서 재생성 가능
+
+
+# API 키 및 개인 설정
+.env
+# .env : api key, secret key 등 민감한 정보가 담긴 파일은 절대 커밋하지 않음
+.env.*
+!.env.example
+
+# players.json 개인 계정 정보 보호
+players.json
+
+
+# Python 캐시
+__pycache__/
+# __pycache__/ : Python이 자동 생성하는 파일
+*.py[cod]
+
+# 데이터베이스 및 개인 전적
+*.db
+#*.db : 개인 경기 전적 데이터 보호
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/
+
+# 로그 파일
+*.log
+logs/
+
+#IDE 설정
+.vscode/
+.idea/
+.mcp.json
