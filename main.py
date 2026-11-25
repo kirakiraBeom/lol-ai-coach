@@ -7,6 +7,8 @@ from riot_api import(
     get_match_detail
 )
 
+from analyzer import is_remake
+
 def main():
     game_name = input("라이엇 닉네임: ").strip()
     tag_line = input("태그(# 제외): ").strip()
