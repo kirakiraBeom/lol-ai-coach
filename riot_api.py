@@ -79,3 +79,13 @@ def get_match_detail(match_id):
     )
 
     return request_api(url)
+
+# 5. 경기 타임라인 조회
+def get_match_timeline(match_id):
+
+    url = (
+        f"https://{ROUTING}.api.riotgames.com"
+        f"/lol/match/v5/matches/{match_id}/timeline"
+    )
+
+    return request_api(url)
