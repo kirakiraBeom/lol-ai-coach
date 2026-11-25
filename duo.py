@@ -31,6 +31,11 @@ def main():
             support["tag_line"]
         )
 
+        adc_account = get_account(
+            adc["game_name"],
+            adc["tag_line"]
+        )
+
         support_puuid = support_account["puuid"]
         adc_puuid = adc_account["puuid"]
 
@@ -74,6 +79,10 @@ def main():
 
             if result is not None:
                 analyzed_matches.append(result)
+
+            else:
+                print("경기 분석 실패")
+        print("최종 분석 경기 수: ", len(analyzed_matches))
 
         # 6. 경기 유형별 분류
         bot_matches = [

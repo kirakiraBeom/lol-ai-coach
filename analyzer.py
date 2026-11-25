@@ -32,7 +32,7 @@ def find_player(match, puuid): # 특정 경기에서 플레이어 정보 찾기
         if player["puuid"] == puuid:
             return player
 
-        return None
+    return None
 
 def classify_duo(support, adc): # 같은 팀으로 플레이했는지, 바텀 포지션인지
 
@@ -124,67 +124,110 @@ def calculate_stats(matches): # 듀오 승률과 평균 KDA 계산
         "win_rate": win_rate
     }
 
+
+def calculate_average_kda(matches, role):
+
+    valid_matches = [
+        match for match in matches
+        if not match["remake"]
+        and match["duo_type"] != "OPPONENT"
+    ]
+
+    total = len(valid_matches)
+
+    if total == 0:
+        return {
+            "kills": 0,
+            "deaths": 0,
+            "assists": 0,
+            "kda": 0
+        }
+
+    kills = sum(
+        match[role]["kills"]
+        for match in valid_matches
+    )
+
+    deaths = sum(
+        match[role]["deaths"]
+        for match in valid_matches
+    )
+
+    assists = sum(
+        match[role]["assists"]
+        for match in valid_matches
+    )
+
+    return {
+        "kills": kills / total,
+        "deaths": deaths / total,
+        "assists": assists / total,
+        "kda": (kills + assists) / max(deaths, 1)
+    }
+
+
+
 def analyze_combinations(matches):
 
     combinations = {}
 
+    # 1. 모든 경기의 챔피언 조합 집계
     for match in matches:
 
-        if match in matches:
+        if match["remake"]:
+            continue
 
-            if match["remake"]:
-                continue
+        if match["duo_type"] != "BOT_DUO":
+            continue
 
-            if match["duo_type"] != "BOT_DUO":
-                continue
+        player1 = match["support"]
+        player2 = match["adc"]
 
-            player1 = match["support"]
-            player2 = match["adc"]
+        # 실제 플레이 포지션 확인
+        if player1["position"] == "UTILITY":
+            support = player1
+            adc = player2
+        else:
+            support = player2
+            adc = player1
 
-            # 실제 플레이 포지션을 기준으로 조합 생성
-            if player1["position"] == "UTILITY":
-                support = player1
-                adc = player2
-            else:
-                support = player2
-                adc = player1
-
-            key = (
-                support["champion"],
-                adc["champion"]
-            )
-
-            if key not in combinations:
-
-                combinations[key] = {
-                    "wins": 0,
-                    "losses": 0,
-                }
-
-            if match["win"]:
-                combinations[key]["wins"] += 1
-
-            else:
-                combinations[key]["losses"] += 1
-
-        results = []
-
-        for key, stats in combinations.items():
-
-            wins = stats["wins"]
-            losses = stats["losses"]
-            total = wins + losses
-
-            results.append({
-                "support": key[0],
-                "adc": key[1],
-                "total": total,
-                "wins": wins,
-                "losses": losses,
-                "win_rate": wins / total * 100
-            })
-        return sorted(
-            results,
-            key = lambda item: item["total"],
-            reverse=True
+        key = (
+            support["champion"],
+            adc["champion"]
         )
+
+        if key not in combinations:
+            combinations[key] = {
+                "wins": 0,
+                "losses": 0
+            }
+
+        if match["win"]:
+            combinations[key]["wins"] += 1
+        else:
+            combinations[key]["losses"] += 1
+
+    # 2. 집계가 끝난 후 결과 리스트 생성
+    results = []
+
+    for key, stats in combinations.items():
+
+        wins = stats["wins"]
+        losses = stats["losses"]
+        total = wins + losses
+
+        results.append({
+            "support": key[0],
+            "adc": key[1],
+            "total": total,
+            "wins": wins,
+            "losses": losses,
+            "win_rate": wins / total * 100
+        })
+
+    # 3. 모든 결과를 정렬한 후 반환
+    return sorted(
+        results,
+        key=lambda item: item["total"],
+        reverse=True
+    )
