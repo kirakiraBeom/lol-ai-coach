@@ -18,7 +18,15 @@ from timeline import (
     find_lane_opponent,
     calculate_lane_difference,
     calculate_team_gold_history,
-    analyze_gold_history
+    analyze_gold_history,
+    format_timestamp,
+    create_participant_map,
+    analyze_kill_events,
+    analyze_player_deaths,
+    analyze_duo_deaths,
+    analyze_objective_events,
+    analyze_building_events,
+    analyze_gold_swings
 )
 
 def main():
@@ -221,6 +229,209 @@ def main():
 
         if not summary["reversals"]:
             print("골드 우위 전환이 없습니다.")
+
+        # 8. 챔피언 처치 이벤트 분석
+        kill_events = analyze_kill_events(
+            selected_match, timeline
+        )
+
+        print("\n===== 퍼스트 블러드 =====")
+
+        first_blood = next(
+            (
+                event for event in kill_events
+                if event["killer_team"] is not None
+                and event["killer_team"] != event["victim_team"]
+            ),
+            None
+        )
+
+        if first_blood:
+            print(
+                f'{format_timestamp(first_blood["timestamp"])} | '
+                f'{first_blood["killer"]} -> '
+                f'{first_blood["victim"]}'
+            )
+
+        # 9. 플레이어별 데스 분석
+        for role, puuid in [
+            ("support", support_puuid),
+            ("adc", adc_puuid)
+        ]:
+            participant_id = get_participant_id(
+                selected_match, puuid
+            )
+
+            deaths = analyze_player_deaths(
+                kill_events, participant_id
+            )
+
+            print(
+                f'\n===== {players[role]["game_name"]} '
+                f'데스기록 ====='
+            )
+
+            print("총 데스: ", len(deaths))
+
+            for death in deaths:
+
+                print(
+                    f'{format_timestamp(death["timestamp"])} | '
+                    f'처치자: {death["killer"]} | '
+                    f'어시스트: '
+                    f'{", ".join(death["assists"]) or "없음"}'
+                )
+
+        # 10. 듀오 연속 데스 분석
+        support_id = get_participant_id(
+            selected_match, support_puuid
+        )
+
+        adc_id = get_participant_id(
+            selected_match, adc_puuid
+        )
+
+        duo_deaths = analyze_duo_deaths(
+            kill_events,
+            support_id,
+            adc_id
+        )
+
+        print("\n===== 듀오 연속 데스 =====")
+
+        for death in duo_deaths:
+
+            print(
+                f'{format_timestamp(death["timestamp"])} | '
+                f'{death["first"]} -> {death["second"]} | '
+                f'{death["interval"]:.1f}초 간격'
+            )
+
+        if not duo_deaths:
+            print("연속 데스가 없습니다.")
+
+        # 11. 오브젝트 분석
+        objectives = analyze_objective_events(
+            selected_match, timeline
+        )
+
+        print("\n===== 주요 오브젝트 기록 =====")
+
+        for objective in objectives:
+
+            objective_team = objective["team_id"]
+
+            if objective_team is None:
+                side = "팀 확인 불가"
+
+            elif objective_team == team_id:
+                side = "아군"
+
+            else:
+                side = "상대"
+
+            print(
+                f'{format_timestamp(objective["timestamp"])} | '
+                f'{side} | '
+                f'{objective["monster"]} | '
+                f'{objective["sub_type"] or "-"} | '
+                f'{objective["killer"]}'
+            )
+        # 12. 건물 파괴 분석
+        buildings = analyze_building_events(
+            selected_match, timeline
+        )
+
+        print("\n===== 포탑 및 억제기 파괴 =====")
+
+        for building in buildings:
+
+            destryoed_team = building["destroyed_team"]
+
+            if destryoed_team is None:
+                side = "팀 확인 불가"
+
+            elif destryoed_team == team_id:
+                side = "아군 건물 파괴"
+
+            else:
+                side = "상대 건물 파괴"
+
+            print(
+                f'{format_timestamp(building["timestamp"])} | '
+                f'{side} | '
+                f'{building["lane"]} | '
+                f'{building["tower"] or building["building"]}'
+            )
+
+        # 13. 주요 골드 변화 구간 분석
+        swings = analyze_gold_swings(
+            history,
+            timeline,
+            threshold=1500
+        )
+
+        participant_map = create_participant_map(
+            selected_match
+        )
+
+        print("\n===== 주요 골드 변화 구간 =====")
+
+        for swing in swings:
+
+            print(
+                f'\n{format_timestamp(swing["start"])} ~ '
+                f'{format_timestamp(swing["end"])} | '
+                f'{swing["change"]:+,}G 변화'
+            )
+
+            print(
+                f'골드 격차: {swing["before"]:+,}G → '
+                f'{swing["after"]:+,}G'
+            )
+
+            for event in swing["events"]:
+
+                time = format_timestamp(
+                    event["timestamp"]
+                )
+
+                event_type = event["type"]
+
+                killer = participant_map.get(
+                    event.get("killerId", 0), {}
+                ).get("champion", "Unknown")
+
+                if event_type == "CHAMPION_KILL":
+
+                    victim = participant_map.get(
+                        event.get("victimId", 0), {}
+                    ).get("champion", "Unknown")
+
+                    print(
+                        f'  {time} | 챔피언 처치 | '
+                        f'{killer} → {victim}'
+                    )
+
+                elif event_type == "ELITE_MONSTER_KILL":
+
+                    print(
+                        f'  {time} | 오브젝트 | '
+                        f'{event.get("monsterType")} | '
+                        f'{killer}'
+                    )
+
+                elif event_type == "BUILDING_KILL":
+
+                    print(
+                        f'  {time} | 건물 파괴 | '
+                        f'{event.get("laneType")} | '
+                        f'{event.get("buildingType")}'
+                    )
+
+            if not swing["events"]:
+                print("  주요 이벤트가 없습니다.")
+
 
     except FileNotFoundError:
         print("players.json 파일을 찾을 수 없습니다.")
